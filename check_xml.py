@@ -107,7 +107,7 @@ def parse_img(file, rels_file):
             'a': "http://schemas.openxmlformats.org/drawingml/2006/main" }
     id_file_dict = {}
     for item in root:
-        id_file_dict[item.attrib["Id"]] = item.attrib["Target"]
+        id_file_dict[item.attrib["Id"]] = item.attrib["Target"].replace("../","")
     
     tree = read_xml(file)
     root = tree.getroot()
@@ -146,6 +146,13 @@ def ocr_img(file):
     return result['code'] == '0', result, ocr_dict
 
 
+def del_name(err_names, name):
+    for i in err_names.keys():
+        if i.find(name) >= 0:
+            err_names.pop(i)
+            return True
+    return False
+    
 if __name__ == '__main__':
     LOG_FORMAT = "[%(asctime)s] - %(levelname)s - %(message)s"
     logging.basicConfig(filename='check.log', level=logging.INFO, format=LOG_FORMAT)
@@ -188,14 +195,21 @@ if __name__ == '__main__':
         share_str_list = share_str_list + parse_str(transform_filepath(f))
 
     cell_image_file_list = []
-    cell_image_node_list = get_node_by_keyvalue(items, {"ContentType":"application/vnd.wps-officedocument.cellimage+xml"})
-    for item in cell_image_node_list:
+    for item in get_node_by_keyvalue(items, {"ContentType":"application/vnd.wps-officedocument.cellimage+xml"}):
         cell_image_file_list.append(item.attrib["PartName"])
+    for item in get_node_by_keyvalue(items, {"ContentType":"application/vnd.openxmlformats-officedocument.drawing+xml"}):
+        cell_image_file_list.append(item.attrib["PartName"])
+
     imgs_list = {}
     for f in cell_image_file_list:
         pos = f.rfind('/')
         rels_file = f[:pos] + "/_rels" + f[pos:] + ".rels"
         imgs_list = dict(imgs_list, **parse_img(transform_filepath(f), transform_filepath(rels_file)))
+
+
+    # print("imgs_list",imgs_list)
+    # print(share_str_list)
+
 
     sheet_file_list = []
     sheet_node_list = get_node_by_keyvalue(items, {"ContentType":"application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"})
@@ -225,7 +239,7 @@ if __name__ == '__main__':
             s, r, ocr_dict = ocr_img(fp)
             if s:
                 if ocr_dict['name'] != i["stu"]['name']:
-                    logging.error("学生[{0}]上传图片的姓名错误！".format(i["stu"]['name']))
+                    logging.error("学生[{0}]上传图片的姓名错误！识别为[{1}]".format(i["stu"]['name'],ocr_dict['name']))
                     img=Image.open(fp)
                     img.show()
                 if ocr_dict['date'].find(today) < 0:
@@ -240,6 +254,7 @@ if __name__ == '__main__':
         for j in i["members"]["names"]:
             err_names[j] = 1
         
+        # print(err_names)
         for f in imgs:
             fp = transform_filepath("xl/" + f)
             s, r, ocr_dict = ocr_img(fp)
@@ -250,10 +265,12 @@ if __name__ == '__main__':
                     if ocr_dict['date'].find(today) < 0:
                         logging.error("学生[{0}]家属[{1}]上传图片的日期错误！".format(i["stu"]['name'],ocr_dict['name']))
                     else:
-                        if ocr_dict['name'] in err_names:
-                            err_names.pop(ocr_dict['name'])
-                        else:
-                            err_imgs[fp] = 1
+                        if del_name(err_names, ocr_dict['name']) == False:
+                            err_imgs[fp] = ocr_dict['name']
+                        #     print(ocr_dict['name'] + " 删除失败")
+                        # else:
+                        #     print(ocr_dict['name'] + " 删除成功")
+
 
         if len(err_names) > 0: 
             logging.error("学生[{0}]没有二维码的的家属有{1}".format(i["stu"]['name'], err_names))
@@ -261,6 +278,7 @@ if __name__ == '__main__':
         if len(err_imgs) > 0:
             # logging.error("学生[{0}]不可识别的图片有{1}".format(i["stu"]['name'], err_imgs))
             for j in err_imgs:
+                logging.error("识别的名称[{0}]".format(err_imgs[j]))
                 img=Image.open(j)
                 img.show()
 
