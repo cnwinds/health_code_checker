@@ -120,11 +120,7 @@ def transform_filepath(f):
 def ocr_img(file):
     ocr_dict = {"name":"","date":""}
     result = json.loads(yinshua.get_content(file))
-    if result['code'] != '0':
-        logging.info("[问题]无法识别的图片{0}".format(result))
-        img=Image.open(file)
-        img.show()
-    else:
+    if result['code'] == '0':
         last_value = ""
         items = result['data']['block'][0]['line']
         for i in items:
@@ -219,16 +215,15 @@ if __name__ == '__main__':
 
     idx = 1
     for i in family_list:
-        flag_date = False
-        
-        logging.info(">>> ({1}) 正在处理学生[{0}] <<<".format(i["stu"]['name'], idx))
+       
+        logging.info(">>> ({1}/{2}) 正在处理学生[{0}] <<<".format(i["stu"]['name'], idx, len(family_list)))
         idx = idx + 1
 
         err_names = {}
         err_imgs = {}
         for j in i["members"]["names"]:
             err_names[j] = "没有识别到二维码"
-
+        
         # 处理学生二维码
         f = i["stu"]["img"]
         if f == '':
@@ -244,6 +239,9 @@ if __name__ == '__main__':
                 elif ocr_dict['name'] != i["stu"]['name']:
                     err_names[i["stu"]['name']] = "没有识别到二维码"
                     err_imgs[fp] = ocr_dict['name']
+            else:
+                err_names[i["stu"]['name']] = "图片识别接口调用错误"
+                err_imgs[fp] = "图片识别接口调用错误:" + r
 
         # 处理成员二维码
         imgs = i["members"]["imgs"]
@@ -262,6 +260,8 @@ if __name__ == '__main__':
                         if del_name(err_names, ocr_dict['name']) == False:
                             err_names[ocr_dict['name']] = "二维码姓名错误"
                             err_imgs[fp] = ocr_dict['name']
+            else:
+                err_imgs[fp] = "图片识别接口调用错误:" + r
 
         # 统一错误提示
         if len(err_names) > 0: 
