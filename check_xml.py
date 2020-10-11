@@ -228,7 +228,6 @@ if __name__ == '__main__':
         f = i["stu"]["img"]
         if f == '':
             err_names[i["stu"]['name']] = "没有上传二维码"
-            err_imgs[fp] = ocr_dict['name']
         else:
             fp = transform_filepath("xl/" + f)
             s, r, ocr_dict = ocr_img(fp)
