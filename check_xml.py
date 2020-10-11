@@ -5,16 +5,12 @@ from PIL import Image
 import json
 
 import xml_parse
-from xml_parse import get_node_by_keyvalue, read_xml
+from xml_parse import get_node_by_keyvalue, read_xml, read_xml_remove_ns
 import yinshua
 import re
 
-today = time.strftime("%Y-%m-%d")
-tmp_dir = 'tmp'
-
-all_names = {}
-
 import sys, os, zipfile
+
 def unzip_single(src_file, dest_dir, password = None):
     ''' 解压单个文件到目标文件夹。
     '''
@@ -24,7 +20,7 @@ def unzip_single(src_file, dest_dir, password = None):
     try:
         zf.extractall(path=dest_dir, pwd=password)
     except RuntimeError as e:
-        print(e)
+        logging.error(e)
     zf.close()
 
 """ 读取图片 """
@@ -33,14 +29,12 @@ def get_file_content(filePath):
         return fp.read()
 
 def parse_str(file):
-    tree = read_xml(file)
-    root = tree.getroot()
-    ns = {'d': 'http://schemas.openxmlformats.org/spreadsheetml/2006/main' }
-    
+    root = read_xml_remove_ns(file)
+
     str_list = []
-    items = root.findall('./d:si', ns)
+    items = root.findall('./si')
     for child in items:
-        i1 = child.findall("./d:t", ns)
+        i1 = child.findall("./t")
         if len(i1) > 0:
             str_list.append(i1[0].text.replace(" ", ""))
         else:
@@ -52,15 +46,16 @@ img_pattern = re.compile(r'.*(".*").*')
 
 def parse_sheet(sheet_file, share_str_list, imgs_list):
 
-    tree = read_xml(sheet_file)
-    root = tree.getroot()
-    ns = {'d': 'http://schemas.openxmlformats.org/spreadsheetml/2006/main' }
+    root = read_xml_remove_ns(sheet_file)
+    if root is None:
+        logging.error("表格中有浮动图片，请转成单元格图片后处理！")
+        os._exit(1)
 
     family_list = []
     family = None
     # family = {"stu" :{"name":"", "img":""}, "members": [{"name":"","img":""}]}
     # 获取家庭成员信息
-    items = root.findall('./d:sheetData/d:row', ns)
+    items = root.findall('./sheetData/row')
     for child in items: # row iter
         line_s = child.attrib['r']
         line = int(line_s)
@@ -75,20 +70,20 @@ def parse_sheet(sheet_file, share_str_list, imgs_list):
                     family = {"stu":{"name":"", "img":""}, "members":{"imgs":[],"names":[]}}
                 if c1.attrib['t'] == 's':   # 文字处理
                     if c1.attrib["r"][:1] == "C":  # 学生名字
-                        value = c1.find("./d:v", ns)
+                        value = c1.find("./v")
                         family["stu"]["name"] = share_str_list[int(value.text)]
                     if c1.attrib["r"][:1] == "F":  # 成员姓名
-                        value = c1.find("./d:v", ns)
+                        value = c1.find("./v")
                         family["members"]["names"].append(share_str_list[int(value.text)])
                 elif c1.attrib['t'] == 'str': # 图片处理
                     if c1.attrib["r"][:1] == "D":  # 学生图片
-                        value = c1.find("./d:v", ns)
+                        value = c1.find("./v")
                         search = img_pattern.search(value.text)
                         value = search.group(1)[1:-1]
                         value = imgs_list[value]
                         family["stu"]["img"] = value
                     if c1.attrib["r"][:1] >= "I" and c1.attrib["r"][:1] <= "N":  # 成员图片
-                        value = c1.find("./d:v", ns)
+                        value = c1.find("./v")
                         search = img_pattern.search(value.text)
                         value = search.group(1)[1:-1]
                         value = imgs_list[value]
@@ -101,16 +96,14 @@ def parse_sheet(sheet_file, share_str_list, imgs_list):
 
 
 def parse_img(file, rels_file):
-    tree = read_xml(rels_file)
-    root = tree.getroot()
+    root = read_xml(rels_file).getroot()
     ns = {  'xdr': 'http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing',
             'a': "http://schemas.openxmlformats.org/drawingml/2006/main" }
     id_file_dict = {}
     for item in root:
         id_file_dict[item.attrib["Id"]] = item.attrib["Target"].replace("../","")
     
-    tree = read_xml(file)
-    root = tree.getroot()
+    root = read_xml(file).getroot()
     img_file_dict = {}
     for item in root:
         i1 = item.find("./xdr:pic/xdr:nvPicPr/xdr:cNvPr", ns)
@@ -160,12 +153,15 @@ if __name__ == '__main__':
     console.setLevel(logging.INFO)
     logging.getLogger('').addHandler(console)
 
+    today = time.strftime("%Y-%m-%d")
+    tmp_dir = 'tmp'
+
     import shutil  
     if os.path.exists(tmp_dir) and shutil.rmtree(tmp_dir):
         pass
 
     if len(sys.argv) < 2:
-        print("请带上需要检查的文件")
+        logging.error("请带上需要检查的文件")
         os._exit(0)
     else:
         xlsfilename = sys.argv[1]
@@ -181,10 +177,8 @@ if __name__ == '__main__':
     pic_name_err = 0
 
     # 解析文件集
-    tree = read_xml(transform_filepath("[Content_Types].xml"))
-    root = tree.getroot()
-    ns = {"n":"http://schemas.openxmlformats.org/package/2006/content-types"}
-    items = root.findall("./n:Override", ns)
+    root = read_xml_remove_ns(transform_filepath("[Content_Types].xml"))
+    items = root.findall("./Override")
 
     share_string_file_list = []
     share_string_node_list = get_node_by_keyvalue(items, {"ContentType":"application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml"})
@@ -206,10 +200,8 @@ if __name__ == '__main__':
         rels_file = f[:pos] + "/_rels" + f[pos:] + ".rels"
         imgs_list = dict(imgs_list, **parse_img(transform_filepath(f), transform_filepath(rels_file)))
 
-
-    # print("imgs_list",imgs_list)
-    # print(share_str_list)
-
+    # logging.info("imgs_list",imgs_list)
+    # logging.info(share_str_list)
 
     sheet_file_list = []
     sheet_node_list = get_node_by_keyvalue(items, {"ContentType":"application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"})
@@ -219,6 +211,8 @@ if __name__ == '__main__':
     family_list = []
     for f in sheet_file_list:
         family_list = family_list + parse_sheet(transform_filepath(f), share_str_list, imgs_list)
+        # 只查第一个sheet
+        break
 
     # 得到所有家庭信息列表
     logging.info("共有学生{0}人。".format(len(family_list)))
@@ -230,50 +224,48 @@ if __name__ == '__main__':
         logging.info(">>> ({1}) 正在处理学生[{0}] <<<".format(i["stu"]['name'], idx))
         idx = idx + 1
 
+        err_names = {}
+        err_imgs = {}
+        for j in i["members"]["names"]:
+            err_names[j] = "没有识别到二维码"
+
         # 处理学生二维码
         f = i["stu"]["img"]
         if f == '':
-            logging.error("学生[{0}]没有上传二维码！".format(i["stu"]['name']))
+            err_names[i["stu"]['name']] = "没有上传二维码"
+            err_imgs[fp] = ocr_dict['name']
         else:
             fp = transform_filepath("xl/" + f)
             s, r, ocr_dict = ocr_img(fp)
             if s:
-                if ocr_dict['name'] != i["stu"]['name']:
-                    logging.error("学生[{0}]上传图片的姓名错误！识别为[{1}]".format(i["stu"]['name'],ocr_dict['name']))
-                    img=Image.open(fp)
-                    img.show()
                 if ocr_dict['date'].find(today) < 0:
-                    logging.error("学生[{0}]上传图片的日期错误！".format(i["stu"]['name']))
-                    img=Image.open(fp)
-                    img.show()
+                    err_names[i["stu"]['name']] = "二维码日期错误"
+                    err_imgs[fp] = ocr_dict['name']
+                elif ocr_dict['name'] != i["stu"]['name']:
+                    err_names[i["stu"]['name']] = "没有识别到二维码"
+                    err_imgs[fp] = ocr_dict['name']
 
         # 处理成员二维码
         imgs = i["members"]["imgs"]
-        err_names = {}
-        err_imgs = {}
-        for j in i["members"]["names"]:
-            err_names[j] = 1
-        
-        # print(err_names)
         for f in imgs:
             fp = transform_filepath("xl/" + f)
             s, r, ocr_dict = ocr_img(fp)
             if s:
                 if ocr_dict['date'] == '' and ocr_dict['name'] == '':
-                    err_imgs[fp] = 1
+                    err_imgs[fp] = "图片无法识别"
                 else:
                     if ocr_dict['date'].find(today) < 0:
-                        logging.error("学生[{0}]家属[{1}]上传图片的日期错误！".format(i["stu"]['name'],ocr_dict['name']))
+                        del_name(err_names, ocr_dict['name'])
+                        err_names[ocr_dict['name']] = "二维码日期错误"
+                        err_imgs[fp] = ocr_dict['name']
                     else:
                         if del_name(err_names, ocr_dict['name']) == False:
+                            err_names[ocr_dict['name']] = "二维码姓名错误"
                             err_imgs[fp] = ocr_dict['name']
-                        #     print(ocr_dict['name'] + " 删除失败")
-                        # else:
-                        #     print(ocr_dict['name'] + " 删除成功")
 
-
+        # 统一错误提示
         if len(err_names) > 0: 
-            logging.error("学生[{0}]没有二维码的的家属有{1}".format(i["stu"]['name'], err_names))
+            logging.error("问题：学生[{0}]的问题有{1}".format(i["stu"]['name'], err_names))
         
         if len(err_imgs) > 0:
             # logging.error("学生[{0}]不可识别的图片有{1}".format(i["stu"]['name'], err_imgs))
