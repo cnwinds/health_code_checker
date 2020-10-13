@@ -8,6 +8,9 @@ import xml_parse
 from xml_parse import get_node_by_keyvalue, read_xml, read_xml_remove_ns
 import yinshua
 import re
+# from tkinter import messagebox
+import win32api,win32con
+
 
 import sys, os, zipfile
 
@@ -272,5 +275,9 @@ if __name__ == '__main__':
                 logging.error("识别的名称[{0}]".format(err_imgs[j]))
                 img=Image.open(j)
                 img.show()
+
+        if len(err_names) > 0 and len(err_imgs) == 0:
+            win32api.MessageBox(0, "问题：学生[{0}]的问题有{1}".format(i["stu"]['name'], err_names),"错误提示",win32con.MB_OK)
+
 
     logging.info("### 结束处理文件[{0}] ###".format(xlsfilename))
