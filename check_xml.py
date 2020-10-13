@@ -240,7 +240,7 @@ if __name__ == '__main__':
                     err_imgs[fp] = ocr_dict['name']
             else:
                 err_names[i["stu"]['name']] = "图片识别接口调用错误"
-                err_imgs[fp] = "图片识别接口调用错误:" + r
+                err_imgs[fp] = "图片识别接口调用错误:" + str(r)
 
         # 处理成员二维码
         imgs = i["members"]["imgs"]
@@ -257,10 +257,10 @@ if __name__ == '__main__':
                         err_imgs[fp] = ocr_dict['name']
                     else:
                         if del_name(err_names, ocr_dict['name']) == False:
-                            err_names[ocr_dict['name']] = "二维码姓名错误"
+                            # err_names[ocr_dict['name']] = "二维码姓名错误"
                             err_imgs[fp] = ocr_dict['name']
             else:
-                err_imgs[fp] = "图片识别接口调用错误:" + r
+                err_imgs[fp] = "图片识别接口调用错误:" + str(r)
 
         # 统一错误提示
         if len(err_names) > 0: 
