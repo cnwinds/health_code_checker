@@ -1,6 +1,6 @@
 # 运行环境
 * python 3.8+
-* pip install pywin32 
+* pip install pywin32 matplotlib
 
 # 使用方法
 * 命令行下 check.bat <需要检查的xlsx文件>

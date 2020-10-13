@@ -8,9 +8,12 @@ import xml_parse
 from xml_parse import get_node_by_keyvalue, read_xml, read_xml_remove_ns
 import yinshua
 import re
+
 # from tkinter import messagebox
 import win32api,win32con
 
+import matplotlib.pyplot as plt # plt 用于显示图片
+import matplotlib.image as mpimg # mpimg 用于读取图片
 
 import sys, os, zipfile
 
@@ -271,10 +274,16 @@ if __name__ == '__main__':
         
         if len(err_imgs) > 0:
             # logging.error("学生[{0}]不可识别的图片有{1}".format(i["stu"]['name'], err_imgs))
+
+            idx = 1
+            plt.figure(figsize=(18,9))
             for j in err_imgs:
-                logging.error("识别的名称[{0}]".format(err_imgs[j]))
-                img=Image.open(j)
-                img.show()
+                plt.subplot(1,len(err_imgs),idx)
+                plt.imshow(mpimg.imread(j))
+                plt.xticks([])
+                plt.yticks([])
+                idx = idx + 1
+            plt.show()
 
         if len(err_names) > 0 and len(err_imgs) == 0:
             win32api.MessageBox(0, "问题：学生[{0}]的问题有{1}".format(i["stu"]['name'], err_names),"错误提示",win32con.MB_OK)
