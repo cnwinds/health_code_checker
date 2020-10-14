@@ -283,7 +283,13 @@ if __name__ == '__main__':
                 plt.xticks([])
                 plt.yticks([])
                 img_idx = img_idx + 1
-            plt.show()
+            # plt.show()
+            plt.draw()
+            try:
+                plt.waitforbuttonpress(0) # this will wait for indefinite time
+            except:
+                pass
+            plt.close()
 
         if len(err_names) > 0 and len(err_imgs) == 0:
             win32api.MessageBox(0, "问题：学生[{0}]的问题有{1}".format(i["stu"]['name'], err_names),"错误提示",win32con.MB_OK)
