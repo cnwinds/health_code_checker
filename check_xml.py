@@ -275,14 +275,14 @@ if __name__ == '__main__':
         if len(err_imgs) > 0:
             # logging.error("学生[{0}]不可识别的图片有{1}".format(i["stu"]['name'], err_imgs))
 
-            idx = 1
+            img_idx = 1
             plt.figure(figsize=(18,9))
             for j in err_imgs:
-                plt.subplot(1,len(err_imgs),idx)
+                plt.subplot(1,len(err_imgs),img_idx)
                 plt.imshow(mpimg.imread(j))
                 plt.xticks([])
                 plt.yticks([])
-                idx = idx + 1
+                img_idx = img_idx + 1
             plt.show()
 
         if len(err_names) > 0 and len(err_imgs) == 0:
