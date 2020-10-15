@@ -286,7 +286,9 @@ if __name__ == '__main__':
             # plt.show()
             plt.draw()
             try:
-                plt.waitforbuttonpress(0) # this will wait for indefinite time
+                while True:
+                    if plt.waitforbuttonpress(0) == True: # only when the keyboard is pressed will it close.
+                        break
             except:
                 pass
             plt.close()
