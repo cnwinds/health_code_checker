@@ -35,7 +35,7 @@ def get_file_content(filePath):
         return fp.read()
 
 def parse_str(file):
-    root = read_xml_remove_ns(file)
+    root = read_xml_remove_ns(file, True)
 
     str_list = []
     items = root.findall('./si')
@@ -52,7 +52,7 @@ img_pattern = re.compile(r'.*(".*").*')
 
 def parse_sheet(sheet_file, share_str_list, imgs_list):
 
-    root = read_xml_remove_ns(sheet_file)
+    root = read_xml_remove_ns(sheet_file, False)
     if root is None:
         logging.error("表格中有浮动图片，请转成单元格图片后处理！")
         os._exit(1)
@@ -179,7 +179,7 @@ if __name__ == '__main__':
     pic_name_err = 0
 
     # 解析文件集
-    root = read_xml_remove_ns(transform_filepath("[Content_Types].xml"))
+    root = read_xml_remove_ns(transform_filepath("[Content_Types].xml"), True)
     items = root.findall("./Override")
 
     share_string_file_list = []

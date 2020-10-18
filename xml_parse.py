@@ -12,14 +12,18 @@ def read_xml(in_path):
     tree.parse(in_path)  
     return tree 
 
-def read_xml_remove_ns(in_path):  
+def read_xml_remove_ns(in_path, is_all):  
     '''''读取并解析xml文件 
        in_path: xml路径 
        return: root '''
 
     with open(in_path,encoding='utf-8') as f:
         xmlstring = f.read()
-    xmlstring = re.sub(r"""\s(xmlns[^=]*="[^"]+"|xmlns[^=]*='[^']+')""", '', xmlstring)
+
+    if is_all == True:
+        xmlstring = re.sub(r"""\s(xmlns[^=]*="[^"]+"|xmlns[^=]*='[^']+')""", '', xmlstring)
+    else:
+        xmlstring = re.sub(r"""\s(xmlns="[^"]+"|xmlns='[^']+')""", '', xmlstring)
     try:
         return ET.fromstring(xmlstring) 
     except:
