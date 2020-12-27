@@ -160,7 +160,7 @@ def valid_text(ocr_result, text_item):
                 for line in item['line']:
                     for word in line['word']:
                         for k,v in text_item.items():
-                            if word['content'].find(v) != -1:
+                            if word['content'].find(v) != -1 or v.find(word['content']) != -1:
                                 text_item.pop(k)
                                 result[k] = 1
                                 break
