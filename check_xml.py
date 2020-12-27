@@ -148,6 +148,21 @@ def del_name(err_names, name):
             return True
     return False
     
+def valid_text(ocr_result, text_item):
+    # print('valid_text',text_item)
+    result={}
+    if ocr_result['code'] == '0':
+        for item in ocr_result['data']['block']:
+            if item['type'] == 'text':
+                for line in item['line']:
+                    for word in line['word']:
+                        for k,v in text_item.items():
+                            if word['content'].find(v) != -1:
+                                text_item.pop(k)
+                                result[k] = 1
+                                break
+    return result
+
 if __name__ == '__main__':
     LOG_FORMAT = "[%(asctime)s] - %(levelname)s - %(message)s"
     logging.basicConfig(filename='check.log', level=logging.INFO, format=LOG_FORMAT)
@@ -227,6 +242,7 @@ if __name__ == '__main__':
 
         err_names = {}
         err_imgs = {}
+        # print('members', i["members"]["names"])
         for j in i["members"]["names"]:
             err_names[j] = "没有识别到二维码"
         
@@ -238,10 +254,11 @@ if __name__ == '__main__':
             fp = transform_filepath("xl/" + f)
             s, r, ocr_dict = ocr_img(fp)
             if s:
-                if ocr_dict['date'].find(today) < 0:
+                vtr = valid_text(r, {'date':today, 'name':i["stu"]['name']})
+                if 'date' not in vtr:
                     err_names[i["stu"]['name']] = "二维码日期错误"
                     err_imgs[fp] = ocr_dict['name']
-                elif ocr_dict['name'] != i["stu"]['name']:
+                elif 'name' not in vtr:
                     err_names[i["stu"]['name']] = "没有识别到二维码"
                     err_imgs[fp] = ocr_dict['name']
             else:
@@ -254,17 +271,19 @@ if __name__ == '__main__':
             fp = transform_filepath("xl/" + f)
             s, r, ocr_dict = ocr_img(fp)
             if s:
-                if ocr_dict['date'] == '' and ocr_dict['name'] == '':
-                    err_imgs[fp] = "图片无法识别"
-                else:
-                    if ocr_dict['date'].find(today) < 0:
-                        del_name(err_names, ocr_dict['name'])
-                        err_names[ocr_dict['name']] = "二维码日期错误"
-                        err_imgs[fp] = ocr_dict['name']
-                    else:
-                        if del_name(err_names, ocr_dict['name']) == False:
-                            # err_names[ocr_dict['name']] = "二维码姓名错误"
-                            err_imgs[fp] = ocr_dict['name']
+                # 所有成员都去匹配
+                flag = False
+                for name,_ in err_names.items():
+                    vtr = valid_text(r, {'date':today, 'name':name})
+                    if 'name' in vtr:
+                        flag = True
+                        del_name(err_names, name)
+                        if 'date' not in vtr:
+                            err_names[name] = "日期错误"
+                            err_imgs[fp] = name
+                        break
+                if flag == False:
+                    err_imgs[fp] = "无法匹配到成员"
             else:
                 err_imgs[fp] = "图片识别接口调用错误:" + str(r)
 
