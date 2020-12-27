@@ -124,8 +124,11 @@ def transform_filepath(f):
 
 
 def ocr_img(file):
+    jpg_file = file + '.jpg'
+    image = Image.open(file).convert('RGB')
+    image.save(jpg_file)
     ocr_dict = {"name":"","date":""}
-    result = json.loads(yinshua.get_content(file))
+    result = json.loads(yinshua.get_content(jpg_file))
     if result['code'] == '0':
         last_value = ""
         items = result['data']['block'][0]['line']
