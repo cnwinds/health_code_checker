@@ -319,7 +319,7 @@ if __name__ == '__main__':
                 err_imgs[fp] = "行程码识别失败"
 
 
-        if len(i["members"]["names"]) != travel_count:
+        if len(i["members"]["names"]) > travel_count:
             err_names['行程码'] = "同住人{}个，有效的行程码{}个，数量不够".format(len(i["members"]["names"]), travel_count)
 
         # 统一错误提示
