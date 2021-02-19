@@ -69,11 +69,10 @@ def parse_sheet(sheet_file, share_str_list, imgs_list):
             continue
         for c1 in child: # c iter
             if 't' in c1.attrib:
-                
                 if c1.attrib["r"][:1] == "C":  # 重置
                     if family:
                         family_list.append(family)
-                    family = {"stu":{"name":"", "img":""}, "members":{"imgs":[],"names":[]}}
+                    family = {"stu":{"name":"", "img":""}, "members":{"imgs":[],"names":[]}, "travel":{"imgs":[]}}
                 if c1.attrib['t'] == 's':   # 文字处理
                     if c1.attrib["r"][:1] == "C":  # 学生名字
                         value = c1.find("./v")
@@ -94,10 +93,16 @@ def parse_sheet(sheet_file, share_str_list, imgs_list):
                         value = search.group(1)[1:-1]
                         value = imgs_list[value]
                         family["members"]["imgs"].append(value)
+                    if c1.attrib["r"][:1] >= "O" and c1.attrib["r"][:1] <= "T":  # 行程图片
+                        value = c1.find("./v")
+                        search = img_pattern.search(value.text)
+                        value = search.group(1)[1:-1]
+                        value = imgs_list[value]
+                        family["travel"]["imgs"].append(value)
 
     if family:
         family_list.append(family)
-    
+
     return family_list
 
 
@@ -108,7 +113,7 @@ def parse_img(file, rels_file):
     id_file_dict = {}
     for item in root:
         id_file_dict[item.attrib["Id"]] = item.attrib["Target"].replace("../","")
-    
+
     root = read_xml(file).getroot()
     img_file_dict = {}
     for item in root:
@@ -150,7 +155,7 @@ def del_name(err_names, name):
             err_names.pop(i)
             return True
     return False
-    
+
 def valid_text(ocr_result, text_item):
     # print('valid_text',text_item)
     result={}
@@ -176,7 +181,7 @@ if __name__ == '__main__':
     today = time.strftime("%Y-%m-%d")
     tmp_dir = 'tmp'
 
-    import shutil  
+    import shutil
     if os.path.exists(tmp_dir) and shutil.rmtree(tmp_dir):
         pass
 
@@ -185,7 +190,7 @@ if __name__ == '__main__':
         os._exit(0)
     else:
         xlsfilename = sys.argv[1]
-    
+
     logging.info("### 开始处理文件[{0}] ###".format(xlsfilename))
 
     unzip_single(xlsfilename, tmp_dir)
@@ -237,9 +242,10 @@ if __name__ == '__main__':
     # 得到所有家庭信息列表
     logging.info("共有学生{0}人。".format(len(family_list)))
 
+    travel_mobile = {}
     idx = 1
     for i in family_list:
-       
+
         logging.info(">>> ({1}/{2}) 正在处理学生[{0}] <<<".format(i["stu"]['name'], idx, len(family_list)))
         idx = idx + 1
 
@@ -248,7 +254,7 @@ if __name__ == '__main__':
         # print('members', i["members"]["names"])
         for j in i["members"]["names"]:
             err_names[j] = "没有识别到二维码"
-        
+
         # 处理学生二维码
         f = i["stu"]["img"]
         if f == '':
@@ -290,10 +296,36 @@ if __name__ == '__main__':
             else:
                 err_imgs[fp] = "图片识别接口调用错误:" + str(r)
 
+        # 行程码手机号不能重复
+        travel_count = 0
+        imgs = i["travel"]["imgs"]
+        for f in imgs:
+            fp = transform_filepath("xl/" + f)
+            s, r, ocr_dict = ocr_img(fp)
+            if s and 'name' in ocr_dict and 'date' in ocr_dict:
+                # 所有行程手机号去匹配
+                if 'name' in ocr_dict:
+                    mobile = ocr_dict['name'][:11]
+                    if mobile in travel_mobile:
+                        err_names['行程码手机号重复'] = "\'{}\'的行程码手机号\'{}\'和\'{}\'的行程码手机号重复".format(i['stu']['name'], mobile, travel_mobile[mobile])
+                    else:
+                        date = ocr_dict['date'].replace('.','-')
+                        if today in date:
+                            travel_mobile[mobile] = i['stu']['name']
+                            travel_count = travel_count + 1
+                        else:
+                            err_imgs[fp] = "行程码不是今天的"
+            else:
+                err_imgs[fp] = "行程码识别失败"
+
+
+        if len(i["members"]["names"]) != travel_count:
+            err_names['行程码'] = "同住人{}个，有效的行程码{}个，数量不够".format(len(i["members"]["names"]), travel_count)
+
         # 统一错误提示
-        if len(err_names) > 0: 
+        if len(err_names) > 0:
             logging.error("问题：学生[{0}]的问题有{1}".format(i["stu"]['name'], err_names))
-        
+
         if len(err_imgs) > 0:
             # logging.error("学生[{0}]不可识别的图片有{1}".format(i["stu"]['name'], err_imgs))
 
