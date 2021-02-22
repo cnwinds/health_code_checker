@@ -297,30 +297,30 @@ if __name__ == '__main__':
                 err_imgs[fp] = "图片识别接口调用错误:" + str(r)
 
         # 行程码手机号不能重复
-        travel_count = 0
-        imgs = i["travel"]["imgs"]
-        for f in imgs:
-            fp = transform_filepath("xl/" + f)
-            s, r, ocr_dict = ocr_img(fp)
-            if s and 'name' in ocr_dict and 'date' in ocr_dict:
-                # 所有行程手机号去匹配
-                if 'name' in ocr_dict:
-                    mobile = ocr_dict['name'][:11]
-                    if mobile in travel_mobile:
-                        err_names['行程码手机号重复'] = "\'{}\'的行程码手机号\'{}\'和\'{}\'的行程码手机号重复".format(i['stu']['name'], mobile, travel_mobile[mobile])
-                    else:
-                        date = ocr_dict['date'].replace('.','-')
-                        if today in date:
-                            travel_mobile[mobile] = i['stu']['name']
-                            travel_count = travel_count + 1
-                        else:
-                            err_imgs[fp] = "行程码不是今天的"
-            else:
-                err_imgs[fp] = "行程码识别失败"
+        # travel_count = 0
+        # imgs = i["travel"]["imgs"]
+        # for f in imgs:
+        #     fp = transform_filepath("xl/" + f)
+        #     s, r, ocr_dict = ocr_img(fp)
+        #     if s and 'name' in ocr_dict and 'date' in ocr_dict:
+        #         # 所有行程手机号去匹配
+        #         if 'name' in ocr_dict:
+        #             mobile = ocr_dict['name'][:11]
+        #             if mobile in travel_mobile:
+        #                 err_names['行程码手机号重复'] = "\'{}\'的行程码手机号\'{}\'和\'{}\'的行程码手机号重复".format(i['stu']['name'], mobile, travel_mobile[mobile])
+        #             else:
+        #                 date = ocr_dict['date'].replace('.','-')
+        #                 if today in date:
+        #                     travel_mobile[mobile] = i['stu']['name']
+        #                     travel_count = travel_count + 1
+        #                 else:
+        #                     err_imgs[fp] = "行程码不是今天的"
+        #     else:
+        #         err_imgs[fp] = "行程码识别失败"
 
 
-        if len(i["members"]["names"]) > travel_count:
-            err_names['行程码'] = "同住人{}个，有效的行程码{}个，数量不够".format(len(i["members"]["names"]), travel_count)
+        # if len(i["members"]["names"]) > travel_count:
+        #     err_names['行程码'] = "同住人{}个，有效的行程码{}个，数量不够".format(len(i["members"]["names"]), travel_count)
 
         # 统一错误提示
         if len(err_names) > 0:
