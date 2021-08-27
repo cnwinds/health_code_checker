@@ -4,7 +4,6 @@ import time
 from PIL import Image
 import json
 
-import xml_parse
 from xml_parse import get_node_by_keyvalue, read_xml, read_xml_remove_ns
 import yinshua
 import re
@@ -50,7 +49,7 @@ def parse_str(file):
 
 img_pattern = re.compile(r'.*(".*").*')
 
-def parse_sheet(sheet_file, share_str_list, imgs_list):
+def parse_family_list(sheet_file, share_str_list, imgs_list):
 
     root = read_xml_remove_ns(sheet_file, False)
     if root is None:
@@ -86,19 +85,19 @@ def parse_sheet(sheet_file, share_str_list, imgs_list):
                         search = img_pattern.search(value.text)
                         value = search.group(1)[1:-1]
                         value = imgs_list[value]
-                        family["stu"]["img"] = value
-                    if c1.attrib["r"][:1] >= "I" and c1.attrib["r"][:1] <= "N":  # 成员图片
+                        family["stu"]["img"] = 'xl/' + value
+                    if c1.attrib["r"][:1] >= "I" and c1.attrib["r"][:1] <= "L":  # 成员图片
                         value = c1.find("./v")
                         search = img_pattern.search(value.text)
                         value = search.group(1)[1:-1]
                         value = imgs_list[value]
-                        family["members"]["imgs"].append(value)
-                    if c1.attrib["r"][:1] >= "O" and c1.attrib["r"][:1] <= "T":  # 行程图片
+                        family["members"]["imgs"].append('xl/' + value)
+                    if c1.attrib["r"][:1] >= "M" and c1.attrib["r"][:1] <= "P":  # 行程图片
                         value = c1.find("./v")
                         search = img_pattern.search(value.text)
                         value = search.group(1)[1:-1]
                         value = imgs_list[value]
-                        family["travel"]["imgs"].append(value)
+                        family["travel"]["imgs"].append('xl/' + value)
 
     if family:
         family_list.append(family)
@@ -124,10 +123,6 @@ def parse_img(file, rels_file):
 
     return img_file_dict
 
-def transform_filepath(f):
-    return tmp_dir + "/" + f
-
-
 def ocr_img(file):
     jpg_file = file + '.jpg'
     image = Image.open(file).convert('RGB')
@@ -146,6 +141,7 @@ def ocr_img(file):
                 ocr_dict["name"] = last_value
                 break
             last_value = value
+    # print(result, ocr_dict)
     return result['code'] == '0', result, ocr_dict
 
 
@@ -171,38 +167,12 @@ def valid_text(ocr_result, text_item):
                                 break
     return result
 
-if __name__ == '__main__':
-    LOG_FORMAT = "[%(asctime)s] - %(levelname)s - %(message)s"
-    logging.basicConfig(filename='check.log', level=logging.INFO, format=LOG_FORMAT)
-    console = logging.StreamHandler()
-    console.setLevel(logging.INFO)
-    logging.getLogger('').addHandler(console)
-
-    today = time.strftime("%Y-%m-%d")
-    tmp_dir = 'tmp'
-
-    import shutil
-    if os.path.exists(tmp_dir) and shutil.rmtree(tmp_dir):
-        pass
-
-    if len(sys.argv) < 2:
-        logging.error("请带上需要检查的文件")
-        os._exit(0)
-    else:
-        xlsfilename = sys.argv[1]
-
-    logging.info("### 开始处理文件[{0}] ###".format(xlsfilename))
+def parse_sheet(xlsfilename, tmp_dir, _parse_func):
 
     unzip_single(xlsfilename, tmp_dir)
 
-    pic_success = 0
-    pic_unknow = 0
-    pic_total = 0
-    pic_date_err = 0
-    pic_name_err = 0
-
     # 解析文件集
-    root = read_xml_remove_ns(transform_filepath("[Content_Types].xml"), True)
+    root = read_xml_remove_ns(tmp_dir + "[Content_Types].xml", True)
     items = root.findall("./Override")
 
     share_string_file_list = []
@@ -211,7 +181,7 @@ if __name__ == '__main__':
         share_string_file_list.append(item.attrib["PartName"])
     share_str_list = []
     for f in share_string_file_list:
-        share_str_list = share_str_list + parse_str(transform_filepath(f))
+        share_str_list = share_str_list + parse_str(tmp_dir + f)
 
     cell_image_file_list = []
     for item in get_node_by_keyvalue(items, {"ContentType":"application/vnd.wps-officedocument.cellimage+xml"}):
@@ -223,7 +193,7 @@ if __name__ == '__main__':
     for f in cell_image_file_list:
         pos = f.rfind('/')
         rels_file = f[:pos] + "/_rels" + f[pos:] + ".rels"
-        imgs_list = dict(imgs_list, **parse_img(transform_filepath(f), transform_filepath(rels_file)))
+        imgs_list = dict(imgs_list, **parse_img(tmp_dir + f, tmp_dir + rels_file))
 
     # logging.info("imgs_list",imgs_list)
     # logging.info(share_str_list)
@@ -235,9 +205,34 @@ if __name__ == '__main__':
 
     family_list = []
     for f in sheet_file_list:
-        family_list = family_list + parse_sheet(transform_filepath(f), share_str_list, imgs_list)
+        family_list = family_list + _parse_func(tmp_dir + f, share_str_list, imgs_list)
         # 只查第一个sheet
         break
+
+    return family_list
+
+if __name__ == '__main__':
+    LOG_FORMAT = "[%(asctime)s] - %(levelname)s - %(message)s"
+    logging.basicConfig(filename='check.log', level=logging.INFO, format=LOG_FORMAT)
+    console = logging.StreamHandler()
+    console.setLevel(logging.INFO)
+    logging.getLogger('').addHandler(console)
+
+    tmp_dir = 'tmp/'
+    import shutil
+    if os.path.exists(tmp_dir) and shutil.rmtree(tmp_dir):
+        pass
+
+    today = time.strftime("%Y-%m-%d")
+
+    if len(sys.argv) < 2:
+        logging.error("请带上需要检查的文件")
+        os._exit(0)
+    else:
+        xlsfilename = sys.argv[1]
+
+    logging.info("### 开始处理文件[{0}] ###".format(xlsfilename))
+    family_list = parse_sheet(xlsfilename, tmp_dir, parse_family_list)
 
     # 得到所有家庭信息列表
     logging.info("共有学生{0}人。".format(len(family_list)))
@@ -260,7 +255,7 @@ if __name__ == '__main__':
         if f == '':
             err_names[i["stu"]['name']] = "没有上传二维码"
         else:
-            fp = transform_filepath("xl/" + f)
+            fp = tmp_dir + f
             s, r, ocr_dict = ocr_img(fp)
             if s:
                 vtr = valid_text(r, {'date':today, 'name':i["stu"]['name']})
@@ -277,7 +272,7 @@ if __name__ == '__main__':
         # 处理成员二维码
         imgs = i["members"]["imgs"]
         for f in imgs:
-            fp = transform_filepath("xl/" + f)
+            fp = tmp_dir + f
             s, r, ocr_dict = ocr_img(fp)
             if s:
                 # 所有成员都去匹配
@@ -297,26 +292,26 @@ if __name__ == '__main__':
                 err_imgs[fp] = "图片识别接口调用错误:" + str(r)
 
         # 行程码手机号不能重复
-        # travel_count = 0
-        # imgs = i["travel"]["imgs"]
-        # for f in imgs:
-        #     fp = transform_filepath("xl/" + f)
-        #     s, r, ocr_dict = ocr_img(fp)
-        #     if s and 'name' in ocr_dict and 'date' in ocr_dict:
-        #         # 所有行程手机号去匹配
-        #         if 'name' in ocr_dict:
-        #             mobile = ocr_dict['name'][:11]
-        #             if mobile in travel_mobile:
-        #                 err_names['行程码手机号重复'] = "\'{}\'的行程码手机号\'{}\'和\'{}\'的行程码手机号重复".format(i['stu']['name'], mobile, travel_mobile[mobile])
-        #             else:
-        #                 date = ocr_dict['date'].replace('.','-')
-        #                 if today in date:
-        #                     travel_mobile[mobile] = i['stu']['name']
-        #                     travel_count = travel_count + 1
-        #                 else:
-        #                     err_imgs[fp] = "行程码不是今天的"
-        #     else:
-        #         err_imgs[fp] = "行程码识别失败"
+        travel_count = 0
+        imgs = i["travel"]["imgs"]
+        for f in imgs:
+            fp = tmp_dir + f
+            s, r, ocr_dict = ocr_img(fp)
+            if s and 'name' in ocr_dict and 'date' in ocr_dict:
+                # 所有行程手机号去匹配
+                if 'name' in ocr_dict:
+                    mobile = ocr_dict['name'][:11]
+                    if mobile in travel_mobile:
+                        err_names['行程码手机号重复'] = "\'{}\'的行程码手机号\'{}\'和\'{}\'的行程码手机号重复".format(i['stu']['name'], mobile, travel_mobile[mobile])
+                    else:
+                        date = ocr_dict['date'].replace('.','-')
+                        if today in date:
+                            travel_mobile[mobile] = i['stu']['name']
+                            travel_count = travel_count + 1
+                        else:
+                            err_imgs[fp] = "行程码不是今天的"
+            else:
+                err_imgs[fp] = "行程码识别失败"
 
 
         # if len(i["members"]["names"]) > travel_count:

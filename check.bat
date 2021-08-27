@@ -1,2 +1,2 @@
-python check_xml.py %1
+python check_health_code.py %1
 pause
