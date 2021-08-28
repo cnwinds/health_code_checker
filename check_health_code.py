@@ -86,13 +86,13 @@ def parse_family_list(sheet_file, share_str_list, imgs_list):
                         value = search.group(1)[1:-1]
                         value = imgs_list[value]
                         family["stu"]["img"] = 'xl/' + value
-                    if c1.attrib["r"][:1] >= "I" and c1.attrib["r"][:1] <= "L":  # 成员图片
+                    if c1.attrib["r"][:1] >= "I" and c1.attrib["r"][:1] <= "M":  # 成员图片
                         value = c1.find("./v")
                         search = img_pattern.search(value.text)
                         value = search.group(1)[1:-1]
                         value = imgs_list[value]
                         family["members"]["imgs"].append('xl/' + value)
-                    if c1.attrib["r"][:1] >= "M" and c1.attrib["r"][:1] <= "P":  # 行程图片
+                    if c1.attrib["r"][:1] >= "N" and c1.attrib["r"][:1] <= "R":  # 行程图片
                         value = c1.find("./v")
                         search = img_pattern.search(value.text)
                         value = search.group(1)[1:-1]
@@ -321,29 +321,31 @@ if __name__ == '__main__':
         if len(err_names) > 0:
             logging.error("问题：学生[{0}]的问题有{1}".format(i["stu"]['name'], err_names))
 
-        if len(err_imgs) > 0:
-            # logging.error("学生[{0}]不可识别的图片有{1}".format(i["stu"]['name'], err_imgs))
+        # 弹图提示
+        # if len(err_imgs) > 0:
+        #     # logging.error("学生[{0}]不可识别的图片有{1}".format(i["stu"]['name'], err_imgs))
 
-            img_idx = 1
-            plt.figure(figsize=(18,9))
-            for j in err_imgs:
-                plt.subplot(1,len(err_imgs),img_idx)
-                plt.imshow(mpimg.imread(j))
-                plt.xticks([])
-                plt.yticks([])
-                img_idx = img_idx + 1
-            # plt.show()
-            plt.draw()
-            try:
-                while True:
-                    if plt.waitforbuttonpress(0) == True: # only when the keyboard is pressed will it close.
-                        break
-            except:
-                pass
-            plt.close()
+        #     img_idx = 1
+        #     plt.figure(figsize=(18,9))
+        #     for j in err_imgs:
+        #         plt.subplot(1,len(err_imgs),img_idx)
+        #         plt.imshow(mpimg.imread(j))
+        #         plt.xticks([])
+        #         plt.yticks([])
+        #         img_idx = img_idx + 1
+        #     # plt.show()
+        #     plt.draw()
+        #     try:
+        #         while True:
+        #             if plt.waitforbuttonpress(0) == True: # only when the keyboard is pressed will it close.
+        #                 break
+        #     except:
+        #         pass
+        #     plt.close()
 
-        if len(err_names) > 0 and len(err_imgs) == 0:
-            win32api.MessageBox(0, "问题：学生[{0}]的问题有{1}".format(i["stu"]['name'], err_names),"错误提示",win32con.MB_OK)
+        # 弹窗提示
+        # # if len(err_names) > 0 and len(err_imgs) == 0:
+        #     win32api.MessageBox(0, "问题：学生[{0}]的问题有{1}".format(i["stu"]['name'], err_names),"错误提示",win32con.MB_OK)
 
 
     logging.info("### 结束处理文件[{0}] ###".format(xlsfilename))
