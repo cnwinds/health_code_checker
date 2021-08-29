@@ -18,9 +18,11 @@ URL = "http://webapi.xfyun.cn/v1/service/v1/ocr/general"
 # 应用ID (必须为webapi类型应用，并印刷文字识别服务，参考帖子如何创建一个webapi应用：http://bbs.xfyun.cn/forum.php?mod=viewthread&tid=36481)
 APPID = "5f5e3433"
 APPID = "5fd5c29a"
+APPID = "54df76f2"
 # 接口密钥(webapi类型应用开通印刷文字识别服务后，控制台--我的应用---印刷文字识别---服务的apikey)
 API_KEY = "15a504a4e1172e9277d4bd48117880fc"
 API_KEY = "2df1397b04a7b50617390c18930852c2"
+API_KEY = "1df6e579aff99d7694114f2f5cb7dd78"
 def getHeader():
 #  当前时间戳
     curTime = str(int(time.time()))

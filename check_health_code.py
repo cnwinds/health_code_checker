@@ -322,30 +322,30 @@ if __name__ == '__main__':
             logging.error("问题：学生[{0}]的问题有{1}".format(i["stu"]['name'], err_names))
 
         # 弹图提示
-        # if len(err_imgs) > 0:
-        #     # logging.error("学生[{0}]不可识别的图片有{1}".format(i["stu"]['name'], err_imgs))
+        if len(err_imgs) > 0:
+            # logging.error("学生[{0}]不可识别的图片有{1}".format(i["stu"]['name'], err_imgs))
 
-        #     img_idx = 1
-        #     plt.figure(figsize=(18,9))
-        #     for j in err_imgs:
-        #         plt.subplot(1,len(err_imgs),img_idx)
-        #         plt.imshow(mpimg.imread(j))
-        #         plt.xticks([])
-        #         plt.yticks([])
-        #         img_idx = img_idx + 1
-        #     # plt.show()
-        #     plt.draw()
-        #     try:
-        #         while True:
-        #             if plt.waitforbuttonpress(0) == True: # only when the keyboard is pressed will it close.
-        #                 break
-        #     except:
-        #         pass
-        #     plt.close()
+            img_idx = 1
+            plt.figure(figsize=(18,9))
+            for j in err_imgs:
+                plt.subplot(1,len(err_imgs),img_idx)
+                plt.imshow(mpimg.imread(j))
+                plt.xticks([])
+                plt.yticks([])
+                img_idx = img_idx + 1
+            # plt.show()
+            plt.draw()
+            try:
+                while True:
+                    if plt.waitforbuttonpress(0) == True: # only when the keyboard is pressed will it close.
+                        break
+            except:
+                pass
+            plt.close()
 
         # 弹窗提示
-        # # if len(err_names) > 0 and len(err_imgs) == 0:
-        #     win32api.MessageBox(0, "问题：学生[{0}]的问题有{1}".format(i["stu"]['name'], err_names),"错误提示",win32con.MB_OK)
+        if len(err_names) > 0 and len(err_imgs) == 0:
+          win32api.MessageBox(0, "问题：学生[{0}]的问题有{1}".format(i["stu"]['name'], err_names),"错误提示",win32con.MB_OK)
 
 
     logging.info("### 结束处理文件[{0}] ###".format(xlsfilename))
